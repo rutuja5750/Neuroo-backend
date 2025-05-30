@@ -1,48 +1,36 @@
-# Node.js
-# Build a general Node.js project with npm.
-# Add steps that analyze code, save build artifacts, deploy, and more:
-# https://docs.microsoft.com/azure/devops/pipelines/languages/javascript
-
 trigger:
 - main
 
 pool:
   vmImage: ubuntu-latest
 
-# variables:
-#   API_TOKEN: $(AZURE_STATIC_WEB_APPS_API_TOKEN)
-  
 steps:
 - task: NodeTool@0
   inputs:
     versionSpec: '20.x'
   displayName: 'Install Node.js'
-  
-- script: npm install
-  displayName: 'Install dependencies'  
+
+- script: npm ci
+  displayName: 'Install dependencies using npm ci'
+
+- script: npm run build
+  displayName: 'Build project (if needed)'
+  continueOnError: true  # Use this only if you don’t have a build script
+
 - task: ArchiveFiles@2
   inputs:
     rootFolderOrFile: '$(System.DefaultWorkingDirectory)'
     includeRootFolder: false
     archiveType: 'zip'
-    archiveFile: '$(Build.ArtifactStagingDirectory)/app.zip'
+    archiveFile: '$(Build.ArtifactStagingDirectory)/node-app.zip'
     replaceExistingArchive: true
-  displayName: 'Zip app files'  
-- task: AzureStaticWebApp@0
-  displayName: 'Deploy to Azure Static Web App'
+  displayName: 'Archive project files'
+
+- task: AzureWebApp@1
   inputs:
-    app_location: '/'
-    api_location: 'api'
-    output_location: 'dummy'
-    # azure_static_web_apps_api_token: $(API_TOKEN)  
-
-# - script: |
-#     npm install
-#   displayName: 'npm install only (no build)'
-
-# - script: |
-#     npm install
-#     npm run build
-#   displayName: 'npm install and build'
-
-
+    azureSubscription: '<YOUR-AZURE-SERVICE-CONNECTION-NAME>'
+    appType: 'webAppLinux'
+    appName: '<YOUR-AZURE-WEBAPP-NAME>'
+    runtimeStack: 'NODE|20-lts'
+    package: '$(Build.ArtifactStagingDirectory)/node-app.zip'
+  displayName: 'Deploy Node.js App to Azure Web App'
